@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;700&display=swap');
+
 * {
   box-sizing: border-box;
 }
@@ -10,9 +12,12 @@ body,
   margin: 0;
   padding: 0;
   overflow: hidden;
+  background-color: #fdfcf5; /* Warm off-white typical of Majlis walls */
 }
 
 body {
   position: fixed;
   overflow: hidden;
+  font-family: 'Inter', 'Amiri', sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
