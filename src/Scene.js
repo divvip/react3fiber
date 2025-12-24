@@ -1,12 +1,13 @@
-import { useState } from "react";
-import { RoundedBox, Cylinder, Box, Float, Text, Torus, MeshReflectorMaterial } from "@react-three/drei";
+import { useState, useMemo } from "react";
+import * as THREE from 'three';
+import { RoundedBox, Cylinder, Box, Float, Text, MeshReflectorMaterial, useTexture } from "@react-three/drei";
 import { Select } from "@react-three/postprocessing";
 
 export function Scene({ config }) {
   const { 
     width, depth, 
     mattressPattern, backrestPattern, armrestPattern,
-    mattressColor, backrestColor, armrestColor, patternColor, floorColor 
+    mattressColor, backrestColor, armrestColor, embroideryColor, floorColor 
   } = config;
   
   const [hovered, setHover] = useState(null);
@@ -14,227 +15,154 @@ export function Scene({ config }) {
   const sideOffset = width / 2;
   const backOffset = depth / 2;
 
-  // Shared props
   const commonProps = {
     hovered, setHover,
-    colors: { mattress: mattressColor, backrest: backrestColor, armrest: armrestColor, pattern: patternColor },
+    colors: { mattress: mattressColor, backrest: backrestColor, armrest: armrestColor, embroidery: embroideryColor },
     patterns: { mattress: mattressPattern, backrest: backrestPattern, armrest: armrestPattern }
   };
 
   return (
     <group>
-      {/* --- High Quality Floor --- */}
+      {/* --- Luxurious Marble Floor --- */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]} receiveShadow>
         <planeGeometry args={[20, 20]} />
         <MeshReflectorMaterial
-          blur={[300, 100]}
+          blur={[400, 100]}
           resolution={1024}
           mixBlur={1}
-          mixStrength={40}
-          roughness={0.2}
-          depthScale={1.2}
+          mixStrength={50}
+          roughness={0.1}
+          depthScale={1}
           minDepthThreshold={0.4}
           maxDepthThreshold={1.4}
           color={floorColor}
-          metalness={0.1}
+          metalness={0.2}
+          mirror={0.7}
         />
       </mesh>
 
-      {/* --- Furniture Layout --- */}
-
-      {/* Back Wall Seating */}
-      <MajlisSection 
-        {...commonProps}
-        position={[0, 0, -backOffset]} 
-        rotation={[0, 0, 0]} 
-        length={width} 
-        name="BACK"
-      />
-
-      {/* Wall Decor behind Back Seating */}
-      <WallDecor position={[0, 2, -backOffset - 0.4]} color={patternColor} />
-
-      {/* Left Wall Seating */}
-      <MajlisSection 
-        {...commonProps}
-        position={[-sideOffset, 0, 0]} 
-        rotation={[0, Math.PI / 2, 0]} 
-        length={depth - 0.85} 
-        name="LEFT"
-      />
-
-      {/* Right Wall Seating */}
-      <MajlisSection 
-        {...commonProps}
-        position={[sideOffset, 0, 0]} 
-        rotation={[0, -Math.PI / 2, 0]} 
-        length={depth - 0.85} 
-        name="RIGHT"
-      />
-
-      {/* Corner Towers (Mada'a) */}
-      <MadaaTower position={[-sideOffset, 0, -backOffset]} color={armrestColor} pattern={patternColor} />
-      <MadaaTower position={[sideOffset, 0, -backOffset]} color={armrestColor} pattern={patternColor} />
-
-      {/* Corner Curtains */}
-      <Curtain position={[-sideOffset - 0.5, 2.5, -backOffset - 0.5]} color={mattressColor} />
-      <Curtain position={[sideOffset + 0.5, 2.5, -backOffset - 0.5]} color={mattressColor} />
-
-      {/* --- Center Pieces --- */}
-      <Table position={[0, 0, 0]} color={patternColor} />
-      
-      {/* Carpet */}
-      <group position={[0, 0.01, 0]}>
-        <mesh rotation={[-Math.PI/2, 0, 0]} receiveShadow>
-          <planeGeometry args={[width - 1.5, depth - 1.5]} />
-          <meshStandardMaterial color={mattressColor} roughness={1} />
-        </mesh>
-        <mesh rotation={[-Math.PI/2, 0, 0]} position={[0, 0.005, 0]}>
-          <planeGeometry args={[width - 1.8, depth - 1.8]} />
-          <meshStandardMaterial color={patternColor} roughness={1} />
-        </mesh>
+      {/* --- Wall Decor (Marble Panels) --- */}
+      <group position={[0, 2, -backOffset - 0.5]}>
+         <Box args={[width + 2, 4, 0.2]}>
+            <meshPhysicalMaterial color="#222" roughness={0.5} metalness={0.5} />
+         </Box>
+         {/* Gold strips on wall */}
+         <Box args={[width + 2, 0.05, 0.22]} position={[0, 1, 0]}>
+            <meshStandardMaterial color={embroideryColor} metalness={1} roughness={0.1} />
+         </Box>
+         <Box args={[width + 2, 0.05, 0.22]} position={[0, -1, 0]}>
+            <meshStandardMaterial color={embroideryColor} metalness={1} roughness={0.1} />
+         </Box>
       </group>
 
-      {/* --- TV Unit (Placed opposite the Back seating) --- */}
-      <TVUnit 
-        position={[0, 0, backOffset + 1.5]} 
+      {/* --- U-Shape Majlis --- */}
+      <MajlisSection {...commonProps} position={[0, 0, -backOffset]} rotation={[0, 0, 0]} length={width} name="BACK" />
+      <MajlisSection {...commonProps} position={[-sideOffset, 0, 0]} rotation={[0, Math.PI / 2, 0]} length={depth - 0.9} name="LEFT" />
+      <MajlisSection {...commonProps} position={[sideOffset, 0, 0]} rotation={[0, -Math.PI / 2, 0]} length={depth - 0.9} name="RIGHT" />
+
+      {/* Corner Towers */}
+      <MadaaCorner position={[-sideOffset, 0, -backOffset]} color={armrestColor} patternColor={embroideryColor} />
+      <MadaaCorner position={[sideOffset, 0, -backOffset]} color={armrestColor} patternColor={embroideryColor} />
+
+      {/* --- Center Pieces --- */}
+      <ModernTable position={[0, 0, 0]} color={backrestColor} accent={embroideryColor} />
+      
+      {/* Rug */}
+      <mesh rotation={[-Math.PI/2, 0, 0]} position={[0, 0.01, 0]} receiveShadow>
+        <planeGeometry args={[width - 1.5, depth - 1.5]} />
+        <meshPhysicalMaterial color={mattressColor} roughness={1} sheen={0.5} />
+      </mesh>
+
+      {/* --- Floating Modern TV Unit --- */}
+      <TVWallUnit 
+        position={[0, 1.5, backOffset + 2]} 
         rotation={[0, Math.PI, 0]} 
-        baseColor={armrestColor}
-        accentColor={patternColor}
+        woodColor={armrestColor}
+        accentColor={embroideryColor}
       />
 
-      {/* Floating Text */}
-      <Float speed={2} rotationIntensity={0} floatIntensity={0.2} floatingRange={[0, 0.1]}>
-        <Text 
-          position={[0, 3, -backOffset]} 
-          color={patternColor} 
-          fontSize={0.3} 
-          font="Inter-Regular.woff"
-          anchorX="center"
-          anchorY="middle"
-        >
-          AL-MAJLIS
-        </Text>
-      </Float>
     </group>
   );
 }
 
-// --- Furniture Components ---
-
-function TVUnit({ position, rotation, baseColor, accentColor }) {
-  return (
-    <group position={position} rotation={rotation}>
-      {/* Media Table Body */}
-      <RoundedBox args={[2.5, 0.5, 0.6]} radius={0.05} smoothness={4} position={[0, 0.25, 0]} castShadow>
-        <meshStandardMaterial color={baseColor} roughness={0.2} />
-      </RoundedBox>
-      
-      {/* Drawers / Pattern */}
-      <mesh position={[0, 0.25, 0.31]}>
-        <planeGeometry args={[2.3, 0.4]} />
-        <meshStandardMaterial color={accentColor} />
-      </mesh>
-
-      {/* Legs */}
-      <Cylinder args={[0.04, 0.02, 0.2]} position={[-1.1, 0.1, 0.2]}><meshStandardMaterial color="#333" /></Cylinder>
-      <Cylinder args={[0.04, 0.02, 0.2]} position={[1.1, 0.1, 0.2]}><meshStandardMaterial color="#333" /></Cylinder>
-      <Cylinder args={[0.04, 0.02, 0.2]} position={[-1.1, 0.1, -0.2]}><meshStandardMaterial color="#333" /></Cylinder>
-      <Cylinder args={[0.04, 0.02, 0.2]} position={[1.1, 0.1, -0.2]}><meshStandardMaterial color="#333" /></Cylinder>
-
-      {/* The TV Screen */}
-      <group position={[0, 0.85, 0]}>
-        {/* Frame */}
-        <RoundedBox args={[2.0, 1.1, 0.05]} radius={0.02} smoothness={4} castShadow>
-          <meshStandardMaterial color="#111" roughness={0.1} metalness={0.8} />
-        </RoundedBox>
-        {/* Actual Screen (Emissive) */}
-        <mesh position={[0, 0, 0.03]}>
-          <planeGeometry args={[1.9, 1.0]} />
-          <meshStandardMaterial color="#000" emissive="#1a2b3c" emissiveIntensity={0.8} roughness={0.1} />
-        </mesh>
-        {/* Stand Neck */}
-        <Box args={[0.2, 0.4, 0.05]} position={[0, -0.6, -0.05]}>
-           <meshStandardMaterial color="#111" />
-        </Box>
-        {/* Stand Base */}
-        <Box args={[0.6, 0.02, 0.3]} position={[0, -0.8, -0.05]}>
-           <meshStandardMaterial color="#111" />
-        </Box>
-      </group>
-    </group>
-  )
-}
+// --- Furniture Logic ---
 
 function MajlisSection({ position, rotation, length, colors, patterns, hovered, setHover, name }) {
-  const cushionWidth = 0.9;
+  const cushionWidth = 0.95;
   const count = Math.floor(length / cushionWidth);
   
   return (
     <group position={position} rotation={rotation}>
       <Select enabled={hovered === name}>
-        <group 
-          onPointerOver={(e) => (e.stopPropagation(), setHover(name))} 
-          onPointerOut={() => setHover(null)}
-        >
-          {/* 1. Base Mattress */}
-          <group position={[0, 0.15, 0]}>
-            <RoundedBox args={[length, 0.3, 0.85]}Nm radius={0.02} smoothness={4} castShadow receiveShadow>
-              <meshStandardMaterial color={colors.mattress} roughness={0.8} />
+        <group onPointerOver={(e) => (e.stopPropagation(), setHover(name))} onPointerOut={() => setHover(null)}>
+          
+          {/* 1. Base Platform (Marble/Wood) */}
+          <Box args={[length, 0.2, 0.85]} position={[0, 0.1, 0]} castShadow>
+             <meshStandardMaterial color="#1a1a1a" roughness={0.1} />
+          </Box>
+          <Box args={[length, 0.02, 0.86]} position={[0, 0.2, 0]}>
+             <meshStandardMaterial color={colors.embroidery} metalness={1} roughness={0.1} />
+          </Box>
+
+          {/* 2. Mattress (Velvet) */}
+          <group position={[0, 0.35, 0]}>
+            <RoundedBox args={[length, 0.3, 0.85]} radius={0.05} smoothness={8} castShadow receiveShadow>
+              <FabricMaterial color={colors.mattress} />
             </RoundedBox>
-            <Piping args={[length, 0.3, 0.85]} />
-            <PatternStrip 
-              type={patterns.mattress} 
-              length={length} 
-              position={[0, 0, 0.43]} 
-              rotation={[Math.PI/2, 0, 0]} 
-              color={colors.pattern} 
+            {/* Front Embroidery */}
+            <EmbroideryStrip 
+              type={patterns.mattress} length={length} width={0.25}
+              position={[0, 0, 0.43]} rotation={[Math.PI/2, 0, 0]} 
+              color={colors.embroidery} 
             />
           </group>
 
-          {/* 2. Backrest Cushions */}
-          <group position={[0, 0.55, -0.25]}>
-            <RoundedBox args={[length, 0.5, 0.25]} radius={0.05} smoothness={4} castShadow>
-              <meshStandardMaterial color={colors.backrest} roughness={0.9} />
+          {/* 3. Backrest */}
+          <group position={[0, 0.75, -0.3]}>
+            <RoundedBox args={[length, 0.5, 0.2]} radius={0.05} smoothness={8} castShadow>
+              <FabricMaterial color={colors.backrest} />
             </RoundedBox>
-            <Piping args={[length, 0.5, 0.25]} />
-            <PatternStrip 
-              type={patterns.backrest} 
-              length={length - 0.2} 
-              position={[0, 0, 0.13]} 
-              rotation={[0, 0, 0]} 
-              color={colors.pattern} 
-              scale={0.8}
+            <EmbroideryStrip 
+              type={patterns.backrest} length={length - 0.2} width={0.3}
+              position={[0, 0, 0.11]} rotation={[0, 0, 0]} 
+              color={colors.embroidery} scale={0.9}
             />
           </group>
 
-          {/* 3. Armrests & Pillows */}
+          {/* 4. Armrests & Pillows */}
           {Array.from({ length: count + 1 }).map((_, i) => {
             const xPos = -length/2 + (i * (length / count));
             if (i === count && xPos > length/2 - 0.1) return null;
 
             return (
-              <group key={i} position={[xPos, 0.45, 0]}>
-                <RoundedBox args={[0.15, 0.4, 0.8]} radius={0.05} smoothness={4} castShadow>
-                   <meshStandardMaterial color={colors.armrest} roughness={0.7} />
+              <group key={i} position={[xPos, 0.5, 0]}>
+                {/* Armrest (Mada'a) */}
+                <RoundedBox args={[0.15, 0.4, 0.85]} radius={0.03} smoothness={4} castShadow>
+                   <FabricMaterial color={colors.armrest} />
                 </RoundedBox>
-                <mesh position={[0, 0.2, 0]} rotation={[0,0,Math.PI/2]}>
-                   <torusGeometry args={[0.08, 0.005, 8, 16]} />
-                   <meshStandardMaterial color="white" />
-                </mesh>
-                <PatternStrip 
-                  type={patterns.armrest}
-                  length={0.7}
-                  position={[0.08, 0, 0]}
-                  rotation={[0, Math.PI/2, 0]}
-                  color={colors.pattern}
-                  scale={0.5}
+                {/* Top decorative plate */}
+                <Box args={[0.16, 0.02, 0.86]} position={[0, 0.21, 0]}>
+                   <meshStandardMaterial color={colors.embroidery} metalness={1} roughness={0.1} />
+                </Box>
+                
+                {/* Armrest Pattern Side */}
+                <EmbroideryStrip 
+                  type={patterns.armrest} length={0.7} width={0.15}
+                  position={[0.08, 0, 0]} rotation={[0, Math.PI/2, 0]}
+                  color={colors.embroidery} scale={0.6}
                 />
+
+                {/* Modern Scatter Pillow */}
                 {i < count && (
-                  <group position={[0.45, 0, 0.1]}>
-                    <RoundedBox args={[0.45, 0.45, 0.1]} radius={0.1} rotation={[-0.2, 0, 0]} castShadow>
-                      <meshStandardMaterial color={i % 2 === 0 ? colors.pattern : colors.armrest} />
+                  <group position={[0.45, 0.1, 0.1]} rotation={[-0.1, 0, 0]}>
+                    <RoundedBox args={[0.45, 0.45, 0.12]} radius={0.08} smoothness={8} castShadow>
+                      <FabricMaterial color={i % 2 === 0 ? colors.backrest : colors.armrest} />
                     </RoundedBox>
+                    {/* Metallic Button */}
+                    <mesh position={[0, 0, 0.055]} scale={[1,1,0.5]}>
+                       <sphereGeometry args={[0.04, 16, 16]} />
+                       <meshStandardMaterial color={colors.embroidery} metalness={1} />
+                    </mesh>
                   </group>
                 )}
               </group>
@@ -246,164 +174,194 @@ function MajlisSection({ position, rotation, length, colors, patterns, hovered, 
   );
 }
 
-function MadaaTower({ position, color, pattern }) {
+// --- Specialized Components ---
+
+// Reusable Velvet-like material
+function FabricMaterial({ color }) {
+  return (
+    <meshPhysicalMaterial 
+      color={color} 
+      roughness={0.7} 
+      metalness={0.1}
+      sheen={1.0}
+      sheenRoughness={0.5}
+      sheenColor="white"
+      clearcoat={0}
+    />
+  );
+}
+
+function MadaaCorner({ position, color, patternColor }) {
   return (
     <group position={position}>
-      <RoundedBox args={[0.85, 0.75, 0.85]} radius={0.02} smoothness={4} position={[0, 0.375, 0]} castShadow>
-        <meshStandardMaterial color={color} roughness={0.8} />
+      <RoundedBox args={[0.9, 0.7, 0.9]} radius={0.02} smoothness={4} position={[0, 0.35, 0]} castShadow>
+        <FabricMaterial color={color} />
       </RoundedBox>
-      <Piping args={[0.85, 0.75, 0.85]} />
-      <mesh rotation={[-Math.PI/2, 0, 0]} position={[0, 0.76, 0]}>
-        <planeGeometry args={[0.6, 0.6]} />
-        <meshStandardMaterial color={pattern} />
-      </mesh>
+      <Box args={[0.92, 0.02, 0.92]} position={[0, 0.71, 0]}>
+         <meshStandardMaterial color={patternColor} metalness={1} roughness={0.2} />
+      </Box>
+      {/* Decorative Lamp on top */}
+      <group position={[0, 0.72, 0]}>
+         <Cylinder args={[0.1, 0.15, 0.1, 8]} position={[0, 0.05, 0]}>
+            <meshStandardMaterial color="#111" />
+         </Cylinder>
+         <mesh position={[0, 0.3, 0]}>
+            <sphereGeometry args={[0.2, 32, 32]} />
+            <meshPhysicalMaterial color="white" transmission={0.9} roughness={0.1} thickness={0.1} />
+         </mesh>
+         <pointLight intensity={0.5} color="#ffaa00" distance={2} position={[0, 0.3, 0]} />
+      </group>
     </group>
   )
 }
 
-function Table({ position, color }) {
+function ModernTable({ position, color, accent }) {
   return (
     <group position={position}>
-      <RoundedBox args={[1.2, 0.35, 1.2]} radius={0.05} position={[0, 0.175, 0]} castShadow>
-        <meshStandardMaterial color={color} metalness={0.1} roughness={0.2} />
+      <RoundedBox args={[1.4, 0.05, 1.0]} radius={0.02} position={[0, 0.35, 0]} castShadow>
+        <meshPhysicalMaterial color="black" roughness={0.1} metalness={0.1} clearcoat={1} />
       </RoundedBox>
-      <mesh position={[0, 0.36, 0]} rotation={[-Math.PI/2,0,0]}>
-         <planeGeometry args={[1,1]} />
-         <meshStandardMaterial color="#111" roughness={0.1} />
-      </mesh>
+      {/* Gold Frame */}
+      <Box args={[1.42, 0.02, 1.02]} position={[0, 0.35, 0]}>
+         <meshStandardMaterial color={accent} metalness={1} roughness={0.1} />
+      </Box>
+      {/* Legs */}
+      <group position={[0, 0.175, 0]}>
+         <Box args={[1.2, 0.35, 0.8]}><meshStandardMaterial color={color} /></Box>
+      </group>
     </group>
   )
 }
 
-function WallDecor({ position, color }) {
+function TVWallUnit({ position, rotation, woodColor, accentColor }) {
   return (
-    <group position={position}>
-      <mesh position={[0, 0, 0]}>
-        <ringGeometry args={[0.8, 0.9, 4, 1, Math.PI/4]} />
-        <meshStandardMaterial color={color} />
-      </mesh>
-      <mesh position={[-1.5, 0, 0]}>
-        <ringGeometry args={[0.6, 0.7, 4, 1, Math.PI/4]} />
-        <meshStandardMaterial color={color} />
-      </mesh>
-      <mesh position={[1.5, 0, 0]}>
-        <ringGeometry args={[0.6, 0.7, 4, 1, Math.PI/4]} />
-        <meshStandardMaterial color={color} />
-      </mesh>
+    <group position={position} rotation={rotation}>
+      {/* Floating Console */}
+      <RoundedBox args={[2.8, 0.4, 0.5]} radius={0.02} position={[0, -0.5, 0]} castShadow>
+         <meshStandardMaterial color={woodColor} roughness={0.2} />
+      </RoundedBox>
+      {/* Gold Inlay */}
+      <Box args={[2.82, 0.05, 0.52]} position={[0, -0.6, 0]}>
+         <meshStandardMaterial color={accentColor} metalness={1} roughness={0.2} />
+      </Box>
+      
+      {/* Wall Panel */}
+      <Box args={[3.0, 2.5, 0.1]} position={[0, 1, -0.3]}>
+         <meshStandardMaterial color="#1a1a1a" roughness={0.5} />
+      </Box>
+
+      {/* TV Screen */}
+      <group position={[0, 1.0, 0]}>
+        <RoundedBox args={[2.2, 1.25, 0.05]} radius={0.01} castShadow>
+          <meshStandardMaterial color="#050505" roughness={0.2} metalness={0.8} />
+        </RoundedBox>
+        {/* Glow of screen */}
+        <mesh position={[0, 0, 0.03]}>
+          <planeGeometry args={[2.15, 1.2]} />
+          <meshBasicMaterial color="#000" />
+        </mesh>
+      </group>
     </group>
   )
 }
 
-function Curtain({ position, color }) {
-  return (
-    <group position={position}>
-      <Cylinder args={[0.4, 0.6, 3, 8, 1, true, 0, Math.PI]} rotation={[0, Math.PI/4, 0]} side={2}>
-        <meshStandardMaterial color={color} side={2} />
-      </Cylinder>
-    </group>
-  )
-}
+// --- High Fidelity Pattern Generator ---
+function EmbroideryStrip({ type, length, width, position, rotation, color, scale = 1 }) {
+  if (type === "None") return null;
 
-function Piping({ args }) {
-  const [w, h, d] = args;
-  const t = 0.008;
-  const color = "#fff"; 
-  return (
-    <group>
-      <mesh position={[0, h/2, d/2]}><boxGeometry args={[w, t, t]} /><meshStandardMaterial color={color} /></mesh>
-      <mesh position={[0, h/2, -d/2]}><boxGeometry args={[w, t, t]} /><meshStandardMaterial color={color} /></mesh>
-      <mesh position={[w/2, h/2, 0]}><boxGeometry args={[t, t, d]} /><meshStandardMaterial color={color} /></mesh>
-      <mesh position={[-w/2, h/2, 0]}><boxGeometry args={[t, t, d]} /><meshStandardMaterial color={color} /></mesh>
-    </group>
-  )
-}
-
-// --- Pattern Logic ---
-function PatternStrip({ type, length, position, rotation, color, scale = 1 }) {
-  const segmentSize = 0.25;
+  const segmentSize = 0.3;
   const repeats = Math.max(1, Math.floor(length / segmentSize));
   
   const Geom = ({ index }) => {
     const x = -(length - 0.1)/2 + (segmentSize/2) + (index * ((length - 0.1) / repeats));
+    const mat = <meshStandardMaterial color={color} metalness={0.8} roughness={0.4} />;
     
     return (
-      <group position={[x, 0, 0.002]}>
+      <group position={[x, 0, 0.005]}>
+        
         {type === "Sadu" && (
           <group>
+            {/* Central Diamond */}
             <mesh rotation={[0, 0, Math.PI/4]}>
-              <planeGeometry args={[0.15, 0.15]} />
-              <meshStandardMaterial color={color} />
+              <boxGeometry args={[0.15, 0.15, 0.01]} />
+              {mat}
             </mesh>
-            <mesh position={[0,0,0.001]} scale={0.5} rotation={[0, 0, Math.PI/4]}>
-               <planeGeometry args={[0.15, 0.15]} />
-               <meshStandardMaterial color="#111" />
+            {/* Side Triangles */}
+            <mesh position={[-0.12, 0, 0]} rotation={[0,0,-Math.PI/2]}>
+               <coneGeometry args={[0.06, 0.08, 4]} />
+               {mat}
             </mesh>
-          </group>
-        )}
-        {type === "Najdi" && (
-          <group>
-            <mesh position={[0, 0.05, 0]}>
-               <coneGeometry args={[0.08, 0.15, 3]} rotation={[0,0,0]} />
-               <meshStandardMaterial color={color} />
-            </mesh>
-            <mesh position={[0, -0.05, 0]} rotation={[0,0,Math.PI]}>
-               <coneGeometry args={[0.08, 0.15, 3]} />
-               <meshStandardMaterial color={color} />
+            <mesh position={[0.12, 0, 0]} rotation={[0,0,Math.PI/2]}>
+               <coneGeometry args={[0.06, 0.08, 4]} />
+               {mat}
             </mesh>
           </group>
         )}
+
         {type === "Royal" && (
           <group>
+            {/* Islamic 8-point star simulation */}
             <mesh rotation={[0, 0, Math.PI/4]}>
-              <circleGeometry args={[0.08, 4]} />
-              <meshStandardMaterial color={color} />
+              <boxGeometry args={[0.12, 0.12, 0.01]} />
+              {mat}
             </mesh>
             <mesh>
-              <circleGeometry args={[0.08, 4]} />
-              <meshStandardMaterial color={color} />
+              <boxGeometry args={[0.12, 0.12, 0.01]} />
+              {mat}
             </mesh>
-            <mesh position={[0,0,0.001]}>
-               <circleGeometry args={[0.04, 8]} />
-               <meshStandardMaterial color="#d4af37" />
+            <mesh position={[0,0,0.005]}>
+               <cylinderGeometry args={[0.04, 0.04, 0.02, 8]} rotation={[Math.PI/2,0,0]} />
+               {mat}
             </mesh>
           </group>
         )}
-        {type === "Damascus" && (
+
+        {type === "Greek" && (
           <group>
-             <mesh position={[0.05, 0.05, 0]}><circleGeometry args={[0.04, 16]} /><meshStandardMaterial color={color} /></mesh>
-             <mesh position={[-0.05, 0.05, 0]}><circleGeometry args={[0.04, 16]} /><meshStandardMaterial color={color} /></mesh>
-             <mesh position={[0.05, -0.05, 0]}><circleGeometry args={[0.04, 16]} /><meshStandardMaterial color={color} /></mesh>
-             <mesh position={[-0.05, -0.05, 0]}><circleGeometry args={[0.04, 16]} /><meshStandardMaterial color={color} /></mesh>
-             <mesh position={[0, 0, 0.001]}><circleGeometry args={[0.03, 16]} /><meshStandardMaterial color="white" /></mesh>
+             {/* Greek Key simplified */}
+             <mesh position={[-0.08, 0.05, 0]}><boxGeometry args={[0.02, 0.1, 0.01]} />{mat}</mesh>
+             <mesh position={[0, 0.09, 0]}><boxGeometry args={[0.18, 0.02, 0.01]} />{mat}</mesh>
+             <mesh position={[0.08, 0, 0]}><boxGeometry args={[0.02, 0.2, 0.01]} />{mat}</mesh>
+             <mesh position={[0, -0.09, 0]}><boxGeometry args={[0.18, 0.02, 0.01]} />{mat}</mesh>
+             <mesh position={[-0.08, -0.05, 0]}><boxGeometry args={[0.02, 0.1, 0.01]} />{mat}</mesh>
           </group>
         )}
-        {type === "Kufic" && (
+
+        {type === "Floral" && (
           <group>
-             <mesh position={[-0.05, 0, 0]}><planeGeometry args={[0.04, 0.18]} /><meshStandardMaterial color={color} /></mesh>
-             <mesh position={[0.05, 0, 0]}><planeGeometry args={[0.04, 0.18]} /><meshStandardMaterial color={color} /></mesh>
-             <mesh position={[0, 0.07, 0]}><planeGeometry args={[0.1, 0.04]} /><meshStandardMaterial color={color} /></mesh>
-             <mesh position={[0, -0.07, 0]}><planeGeometry args={[0.1, 0.04]} /><meshStandardMaterial color={color} /></mesh>
+             <mesh position={[0,0,0]} rotation={[0,0,Math.PI/4]}>
+                <torusGeometry args={[0.06, 0.01, 8, 20]} />
+                {mat}
+             </mesh>
+             <mesh position={[0.08, 0.05, 0]}><sphereGeometry args={[0.02]} />{mat}</mesh>
+             <mesh position={[-0.08, -0.05, 0]}><sphereGeometry args={[0.02]} />{mat}</mesh>
           </group>
         )}
-        {type === "Modern" && (
+
+        {type === "Minimal" && (
           <group>
-             <mesh position={[-0.02, 0, 0]}><planeGeometry args={[0.01, 0.22]} /><meshStandardMaterial color={color} /></mesh>
-             <mesh position={[0.02, 0, 0]}><planeGeometry args={[0.01, 0.22]} /><meshStandardMaterial color={color} /></mesh>
+             <mesh position={[0, 0.04, 0]}><boxGeometry args={[0.28, 0.02, 0.01]} />{mat}</mesh>
+             <mesh position={[0, -0.04, 0]}><boxGeometry args={[0.28, 0.02, 0.01]} />{mat}</mesh>
           </group>
         )}
+
       </group>
     )
   };
 
   return (
     <group position={position} rotation={rotation} scale={scale}>
+      {/* Background fabric strip for embroidery */}
       <mesh>
-        <planeGeometry args={[length - 0.1, 0.25]} />
-        <meshStandardMaterial color="#222" />
+        <planeGeometry args={[length - 0.05, width]} />
+        <meshStandardMaterial color="#000" transparent opacity={0.2} />
       </mesh>
+      
       {Array.from({ length: repeats }).map((_, i) => <Geom key={i} index={i} />)}
-      <mesh position={[0, 0.12, 0.001]}><planeGeometry args={[length, 0.01]} /><meshStandardMaterial color="white" /></mesh>
-      <mesh position={[0, -0.12, 0.001]}><planeGeometry args={[length, 0.01]} /><meshStandardMaterial color="white" /></mesh>
+      
+      {/* Top/Bottom Piping for Strip */}
+      <mesh position={[0, width/2, 0.005]}><boxGeometry args={[length, 0.005, 0.005]} />{<meshStandardMaterial color="white" />}</mesh>
+      <mesh position={[0, -width/2, 0.005]}><boxGeometry args={[length, 0.005, 0.005]} />{<meshStandardMaterial color="white" />}</mesh>
     </group>
   )
 }
