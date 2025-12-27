@@ -1,62 +1,119 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Canvas } from "@react-three/fiber"
 import { Environment, Bvh, OrbitControls, ContactShadows, BakeShadows, SoftShadows } from "@react-three/drei"
 import { EffectComposer, N8AO, TiltShift2, ToneMapping, Bloom, Vignette, Noise } from "@react-three/postprocessing"
 import { Scene } from "./Scene"
 
 export const App = () => {
+  // --- 1. CONFIGURATION STATE (Design) ---
   const [config, setConfig] = useState({
-    // Dimensions
     width: 4.5,
     depth: 4.0,
-    
-    // Patterns (Tattoos)
-    mattressPattern: "Royal", 
-    backrestPattern: "Sadu", 
-    armrestPattern: "Minimal",
-    
-    // Colors
-    mattressColor: "#1c2e4a", // Royal Blue
-    backrestColor: "#16253b", // Dark Blue
-    armrestColor: "#111b2b",  // Darkest Blue
-    embroideryColor: "#d4af37", // Gold
-    woodColor: "#2c1a1a",     // Dark Wood base
-    
-    // Environment Colors
+    mattressPattern: "Sadu", 
+    backrestPattern: "Royal", 
+    armrestPattern: "Najdi",
+    mattressColor: "#1c2e4a",
+    backrestColor: "#16253b",
+    armrestColor: "#111b2b",
+    embroideryColor: "#d4af37",
+    woodColor: "#2c1a1a",
     floorColor: "#f5f5f5",
     wallColor: "#222222",
     clockColor: "#d4af37"
   });
 
-  const handleChange = (key, value) => {
-    setConfig(prev => ({ ...prev, [key]: value }));
-  };
+  // --- 2. ACCOUNTING STATE (Costs) ---
+  const [costs, setCosts] = useState({
+    fabricPrice: 25.00, // per meter
+    threadPrice: 0.50,  // per meter
+    foamPrice: 150.00,  // per cubic meter
+    laborCost: 500.00,  // flat rate
+    woodPrice: 40.00    // per linear meter
+  });
+
+  // --- 3. CALCULATION ENGINE ---
+  const stats = useMemo(() => {
+    // 1. Calculate Linear Meters of Seating (U-Shape)
+    // Back wall width + (Left depth - corner) + (Right depth - corner)
+    const cornerWidth = 0.9;
+    const linearMeters = config.width + (config.depth - cornerWidth) + (config.depth - cornerWidth);
+
+    // 2. Fabric Estimation (CM)
+    // Approx: 3.5m of fabric needed per linear meter of majlis (covering base, back, armrests)
+    const fabricMeters = linearMeters * 3.5;
+    const fabricCM = fabricMeters * 100;
+
+    // 3. Thread Estimation
+    // Depends on Pattern Complexity
+    const patternComplexity = {
+      "None": 50,
+      "Modern": 200,
+      "Sadu": 450,
+      "Najdi": 400,
+      "Royal": 500,
+      "Greek": 350,
+      "Floral": 480,
+      "Kufic": 420
+    };
+    // Average complexity of selected patterns
+    const avgComplexity = (patternComplexity[config.mattressPattern] + patternComplexity[config.backrestPattern]) / 2;
+    const threadMeters = linearMeters * avgComplexity;
+
+    // 4. Foam Volume (Cubic Meters)
+    // Approx 0.4m height * 0.85 depth * length
+    const foamVolume = linearMeters * 0.4 * 0.85;
+
+    // 5. Financials
+    const costFabric = fabricMeters * costs.fabricPrice;
+    const costThread = threadMeters * costs.threadPrice;
+    const costFoam = foamVolume * costs.foamPrice;
+    const costWood = linearMeters * costs.woodPrice;
+    const totalCost = costFabric + costThread + costFoam + costWood + costs.laborCost;
+
+    return {
+      linearMeters,
+      fabricCM,
+      fabricMeters,
+      threadMeters,
+      foamVolume,
+      costFabric,
+      costThread,
+      costFoam,
+      costWood,
+      totalCost
+    };
+  }, [config, costs]);
+
+  const handleChange = (key, value) => setConfig(prev => ({ ...prev, [key]: value }));
+  const handleCostChange = (key, value) => setCosts(prev => ({ ...prev, [key]: parseFloat(value) }));
 
   const patterns = [
-    { value: "Sadu", label: "Sadu (Heritage Diamond)" },
-    { value: "Royal", label: "Royal (Islamic Octagon)" },
-    { value: "Greek", label: "Versace (Greek Key)" },
-    { value: "Floral", label: "Damascus (Floral)" },
-    { value: "Minimal", label: "Modern (Linear)" },
-    { value: "None", label: "No Pattern (Solid)" },
+    { value: "Sadu", label: "Sadu (Heritage)" },
+    { value: "Royal", label: "Royal (Islamic)" },
+    { value: "Greek", label: "Greek Key" },
+    { value: "Floral", label: "Damascus Floral" },
+    { value: "Kufic", label: "Kufic Geo" },
+    { value: "Modern", label: "Modern Lines" },
+    { value: "None", label: "None" },
   ];
 
   return (
     <>
+      {/* --- LEFT PANEL: DESIGNER --- */}
       <div className="controls">
-        <h3>MAJLIS CONFIGURATOR</h3>
+        <h3>DESIGN STUDIO</h3>
         
-        <div className="section-title">Room Size</div>
+        <div className="section-title">Dimensions (Meters)</div>
         <div className="control-group">
-          <label>Width <span className="value-display">{config.width}m</span></label>
+          <label>Width <span>{config.width}m</span></label>
           <input type="range" min="3" max="7" step="0.1" value={config.width} onChange={(e) => handleChange('width', parseFloat(e.target.value))} />
         </div>
         <div className="control-group">
-          <label>Depth <span className="value-display">{config.depth}m</span></label>
+          <label>Length (Depth) <span>{config.depth}m</span></label>
           <input type="range" min="3" max="7" step="0.1" value={config.depth} onChange={(e) => handleChange('depth', parseFloat(e.target.value))} />
         </div>
 
-        <div className="section-title">Embroidery Patterns</div>
+        <div className="section-title">Pattern Configuration</div>
         <div className="control-group">
           <label>Seat Pattern</label>
           <select value={config.mattressPattern} onChange={(e) => handleChange('mattressPattern', e.target.value)}>
@@ -69,85 +126,101 @@ export const App = () => {
             {patterns.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
           </select>
         </div>
-        <div className="control-group">
-          <label>Armrest Detail</label>
-          <select value={config.armrestPattern} onChange={(e) => handleChange('armrestPattern', e.target.value)}>
-            {patterns.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-          </select>
-        </div>
 
-        <div className="section-title">Fabric Colors</div>
+        <div className="section-title">Material Colors</div>
         <div className="control-group">
-          <label>Main Seat (Mattress)</label>
+          <label>Velvet Fabric</label>
           <div className="color-wrapper">
             <input type="color" value={config.mattressColor} onChange={(e) => handleChange('mattressColor', e.target.value)} />
-            <span className="color-label">{config.mattressColor}</span>
           </div>
         </div>
         <div className="control-group">
-          <label>Backrest Cushion</label>
-          <div className="color-wrapper">
-            <input type="color" value={config.backrestColor} onChange={(e) => handleChange('backrestColor', e.target.value)} />
-            <span className="color-label">{config.backrestColor}</span>
-          </div>
-        </div>
-        <div className="control-group">
-          <label>Armrest (Mada'a)</label>
-          <div className="color-wrapper">
-            <input type="color" value={config.armrestColor} onChange={(e) => handleChange('armrestColor', e.target.value)} />
-            <span className="color-label">{config.armrestColor}</span>
-          </div>
-        </div>
-
-        <div className="section-title">Details & Decor</div>
-        <div className="control-group">
-          <label>Embroidery / Gold</label>
+          <label>Embroidery Thread</label>
           <div className="color-wrapper">
             <input type="color" value={config.embroideryColor} onChange={(e) => handleChange('embroideryColor', e.target.value)} />
-            <span className="color-label">{config.embroideryColor}</span>
           </div>
         </div>
         <div className="control-group">
           <label>Wood Base</label>
           <div className="color-wrapper">
             <input type="color" value={config.woodColor} onChange={(e) => handleChange('woodColor', e.target.value)} />
-            <span className="color-label">{config.woodColor}</span>
-          </div>
-        </div>
-        <div className="control-group">
-          <label>Wall Color</label>
-          <div className="color-wrapper">
-            <input type="color" value={config.wallColor} onChange={(e) => handleChange('wallColor', e.target.value)} />
-            <span className="color-label">{config.wallColor}</span>
-          </div>
-        </div>
-        <div className="control-group">
-          <label>Clock & Table Metal</label>
-          <div className="color-wrapper">
-            <input type="color" value={config.clockColor} onChange={(e) => handleChange('clockColor', e.target.value)} />
-            <span className="color-label">{config.clockColor}</span>
-          </div>
-        </div>
-        <div className="control-group">
-          <label>Marble Floor</label>
-          <div className="color-wrapper">
-            <input type="color" value={config.floorColor} onChange={(e) => handleChange('floorColor', e.target.value)} />
-            <span className="color-label">{config.floorColor}</span>
           </div>
         </div>
       </div>
 
-      <Canvas shadows dpr={[1, 1.5]} gl={{ antialias: true, toneMappingExposure: 1.1 }} camera={{ position: [6, 4, 7], fov: 35 }}>
+      {/* --- RIGHT PANEL: ACCOUNTING & FACTORY --- */}
+      <div className="dashboard">
+        <h3>FACTORY ESTIMATOR</h3>
+        
+        <div className="section-title">Production Metrics</div>
+        <div className="data-row">
+          <span className="data-label">Council Dimensions:</span>
+          <span className="data-value">{config.width}m x {config.depth}m</span>
+        </div>
+        <div className="data-row">
+          <span className="data-label">Total Seating Length:</span>
+          <span className="data-value highlight">{stats.linearMeters.toFixed(2)} lm</span>
+        </div>
+        <div className="data-row">
+          <span className="data-label">Fabric Required (cm):</span>
+          <span className="data-value">{Math.ceil(stats.fabricCM).toLocaleString()} cm</span>
+        </div>
+        <div className="data-row">
+          <span className="data-label">Fabric Required (m):</span>
+          <span className="data-value">{stats.fabricMeters.toFixed(2)} m</span>
+        </div>
+        <div className="data-row">
+          <span className="data-label">Embroidery Thread:</span>
+          <span className="data-value highlight">{Math.ceil(stats.threadMeters).toLocaleString()} m</span>
+        </div>
+        <div className="data-row">
+          <span className="data-label">Foam Volume:</span>
+          <span className="data-value">{stats.foamVolume.toFixed(2)} m³</span>
+        </div>
+
+        <div className="section-title">Unit Cost Settings</div>
+        <div className="control-group">
+          <label>Fabric Price ($/m)</label>
+          <input type="number" value={costs.fabricPrice} onChange={(e) => handleCostChange('fabricPrice', e.target.value)} />
+        </div>
+        <div className="control-group">
+          <label>Thread Price ($/m)</label>
+          <input type="number" value={costs.threadPrice} onChange={(e) => handleCostChange('threadPrice', e.target.value)} />
+        </div>
+        <div className="control-group">
+          <label>Labor (Flat Rate)</label>
+          <input type="number" value={costs.laborCost} onChange={(e) => handleCostChange('laborCost', e.target.value)} />
+        </div>
+
+        <div className="total-box">
+          <div className="total-row">
+            <span>Material Cost:</span>
+            <span>${(stats.totalCost - costs.laborCost).toFixed(2)}</span>
+          </div>
+          <div className="total-row">
+            <span>Labor:</span>
+            <span>${costs.laborCost.toFixed(2)}</span>
+          </div>
+          <div className="total-row grand-total">
+            <span>TOTAL ESTIMATE:</span>
+            <span>${stats.totalCost.toFixed(2)}</span>
+          </div>
+        </div>
+
+        <button className="print-btn" onClick={() => window.print()}>Print Quotation</button>
+      </div>
+
+      {/* --- 3D SCENE --- */}
+      <Canvas shadows dpr={[1, 1.5]} gl={{ antialias: true, toneMappingExposure: 1.1 }} camera={{ position: [7, 5, 8], fov: 35 }}>
         <color attach="background" args={['#111']} />
         
-        {/* Studio Lighting */}
         <ambientLight intensity={0.4} />
         <spotLight position={[5, 8, 5]} angle={0.4} penumbra={0.5} intensity={1.5} castShadow shadow-bias={-0.0001} />
         <spotLight position={[-5, 8, -5]} angle={0.4} penumbra={0.5} intensity={0.5} color="#ffdcb4" />
         <pointLight position={[0, 3, 0]} intensity={0.3} color="white" />
         
         <Environment preset="lobby" />
-        <SoftShadows size={10} samples={16} />
+        <SoftShadows size={15} samples={16} />
 
         <Bvh firstHitOnly>
           <group position={[0, -0.5, 0]}>
@@ -159,11 +232,10 @@ export const App = () => {
         <OrbitControls 
           minPolarAngle={0} 
           maxPolarAngle={Math.PI / 2.1} 
-          maxDistance={18}
+          maxDistance={25}
           minDistance={3}
-          target={[0, 0.8, 0]}
+          target={[0, 0.5, 0]}
           enableDamping={true}
-          dampingFactor={0.05}
         />
 
         <Effects />
