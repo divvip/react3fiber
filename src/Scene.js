@@ -24,7 +24,7 @@ export function Scene({ config }) {
 
   return (
     <group>
-      {/* Floor */}
+      {/* --- Floor --- */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]} receiveShadow>
         <planeGeometry args={[20, 20]} />
         <MeshReflectorMaterial
@@ -42,37 +42,44 @@ export function Scene({ config }) {
         />
       </mesh>
 
-      {/* Wall Panel & Clock */}
+      {/* --- Wall Decor & Clock --- */}
       <group position={[0, 2, -backOffset - 0.5]}>
+         {/* Main Wall Panel */}
          <Box args={[width + 2, 4, 0.2]}>
             <meshPhysicalMaterial color={wallColor} roughness={0.5} metalness={0.2} />
          </Box>
+         
+         {/* Decorative Gold Strips */}
          <Box args={[width + 2, 0.05, 0.22]} position={[0, 1.2, 0]}>
             <meshStandardMaterial color={embroideryColor} metalness={1} roughness={0.1} />
          </Box>
          <Box args={[width + 2, 0.05, 0.22]} position={[0, -1.2, 0]}>
             <meshStandardMaterial color={embroideryColor} metalness={1} roughness={0.1} />
          </Box>
+
+         {/* WALL CLOCK */}
          <WallClock position={[0, 0.5, 0.15]} color={clockColor} />
       </group>
 
-      {/* Seating */}
+      {/* --- U-Shape Majlis --- */}
       <MajlisSection {...commonProps} position={[0, 0, -backOffset]} rotation={[0, 0, 0]} length={width} name="BACK" />
       <MajlisSection {...commonProps} position={[-sideOffset, 0, 0]} rotation={[0, Math.PI / 2, 0]} length={depth - 0.9} name="LEFT" />
       <MajlisSection {...commonProps} position={[sideOffset, 0, 0]} rotation={[0, -Math.PI / 2, 0]} length={depth - 0.9} name="RIGHT" />
 
-      {/* Corners */}
+      {/* Corner Towers */}
       <MadaaCorner position={[-sideOffset, 0, -backOffset]} color={armrestColor} patternColor={embroideryColor} />
       <MadaaCorner position={[sideOffset, 0, -backOffset]} color={armrestColor} patternColor={embroideryColor} />
 
-      {/* Table & Rug */}
+      {/* --- Center Pieces --- */}
       <ModernTable position={[0, 0, 0]} color={backrestColor} accent={clockColor} />
+      
+      {/* Rug */}
       <mesh rotation={[-Math.PI/2, 0, 0]} position={[0, 0.01, 0]} receiveShadow>
         <planeGeometry args={[width - 1.5, depth - 1.5]} />
         <meshPhysicalMaterial color={mattressColor} roughness={1} sheen={0.5} />
       </mesh>
 
-      {/* Text */}
+      {/* Floating Text */}
       <Float speed={2} rotationIntensity={0} floatIntensity={0.2} floatingRange={[0, 0.1]}>
         <Text 
           position={[0, 3.5, -backOffset]} 
@@ -81,12 +88,50 @@ export function Scene({ config }) {
           font="Inter-Regular.woff"
           anchorX="center"
           anchorY="middle"
+          letterSpacing={0.1}
         >
           AL-MAJLIS
         </Text>
       </Float>
     </group>
   );
+}
+
+function WallClock({ position, color }) {
+  return (
+    <group position={position}>
+      {/* Outer Ring */}
+      <Torus args={[0.6, 0.04, 16, 64]}>
+        <meshStandardMaterial color={color} metalness={1} roughness={0.1} />
+      </Torus>
+      {/* Inner Ring */}
+      <Torus args={[0.55, 0.01, 16, 64]}>
+        <meshStandardMaterial color={color} metalness={1} roughness={0.1} />
+      </Torus>
+      {/* Clock Face */}
+      <Cylinder args={[0.58, 0.58, 0.05, 32]} rotation={[Math.PI/2, 0, 0]}>
+        <meshPhysicalMaterial color="black" roughness={0.2} clearcoat={1} />
+      </Cylinder>
+      {/* Center Piece */}
+      <mesh position={[0, 0, 0.06]}>
+        <cylinderGeometry args={[0.05, 0.05, 0.02, 16]} rotation={[Math.PI/2, 0, 0]} />
+        <meshStandardMaterial color={color} metalness={1} />
+      </mesh>
+      {/* Hands */}
+      <Box args={[0.02, 0.35, 0.01]} position={[0, 0.1, 0.08]} rotation={[0,0,-0.5]}>
+        <meshStandardMaterial color={color} metalness={1} />
+      </Box>
+      <Box args={[0.015, 0.45, 0.01]} position={[0.1, 0, 0.08]} rotation={[0,0,-2]}>
+        <meshStandardMaterial color={color} metalness={1} />
+      </Box>
+      {/* Hour Markers */}
+      {[...Array(12)].map((_, i) => (
+         <Box key={i} args={[0.02, 0.1, 0.01]} position={[Math.sin(i/12 * Math.PI*2)*0.45, Math.cos(i/12 * Math.PI*2)*0.45, 0.06]} rotation={[0,0, -i/12 * Math.PI*2]} >
+            <meshStandardMaterial color={color} metalness={1} />
+         </Box>
+      ))}
+    </group>
+  )
 }
 
 function MajlisSection({ position, rotation, length, colors, patterns, hovered, setHover, name }) {
@@ -160,22 +205,6 @@ function MajlisSection({ position, rotation, length, colors, patterns, hovered, 
 
 function FabricMaterial({ color }) {
   return <meshPhysicalMaterial color={color} roughness={0.7} metalness={0.1} sheen={1.0} sheenRoughness={0.5} sheenColor="white" clearcoat={0} />;
-}
-
-function WallClock({ position, color }) {
-  return (
-    <group position={position}>
-      <Torus args={[0.6, 0.04, 16, 64]}><meshStandardMaterial color={color} metalness={1} roughness={0.1} /></Torus>
-      <Torus args={[0.55, 0.01, 16, 64]}><meshStandardMaterial color={color} metalness={1} roughness={0.1} /></Torus>
-      <Cylinder args={[0.58, 0.58, 0.05, 32]} rotation={[Math.PI/2, 0, 0]}><meshPhysicalMaterial color="black" roughness={0.2} clearcoat={1} /></Cylinder>
-      <mesh position={[0, 0, 0.06]}><cylinderGeometry args={[0.05, 0.05, 0.02, 16]} rotation={[Math.PI/2, 0, 0]} /><meshStandardMaterial color={color} metalness={1} /></mesh>
-      <Box args={[0.02, 0.35, 0.01]} position={[0, 0.1, 0.08]} rotation={[0,0,-0.5]}><meshStandardMaterial color={color} metalness={1} /></Box>
-      <Box args={[0.015, 0.45, 0.01]} position={[0.1, 0, 0.08]} rotation={[0,0,-2]}><meshStandardMaterial color={color} metalness={1} /></Box>
-      {[...Array(12)].map((_, i) => (
-         <Box key={i} args={[0.02, 0.1, 0.01]} position={[Math.sin(i/12 * Math.PI*2)*0.45, Math.cos(i/12 * Math.PI*2)*0.45, 0.06]} rotation={[0,0, -i/12 * Math.PI*2]} ><meshStandardMaterial color={color} metalness={1} /></Box>
-      ))}
-    </group>
-  )
 }
 
 function MadaaCorner({ position, color, patternColor }) {
