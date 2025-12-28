@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react"
 import { Canvas } from "@react-three/fiber"
-import { Environment, Bvh, OrbitControls, ContactShadows, BakeShadows, SoftShadows } from "@react-three/drei"
+import { Environment, Bvh, OrbitControls, ContactShadows, BakeShadows, SoftShadows, Lightformer } from "@react-three/drei"
 import { EffectComposer, N8AO, TiltShift2, ToneMapping, Bloom, Vignette, Noise } from "@react-three/postprocessing"
 import { Scene } from "./Scene"
 
@@ -9,8 +9,8 @@ export const App = () => {
   const [config, setConfig] = useState({
     width: 4.5,
     depth: 4.0,
-    mattressPattern: "Sadu", 
-    backrestPattern: "Royal", 
+    mattressPattern: "Royal", 
+    backrestPattern: "Sadu", 
     armrestPattern: "Najdi",
     mattressColor: "#1c2e4a",
     backrestColor: "#16253b",
@@ -33,55 +33,34 @@ export const App = () => {
 
   // --- 3. CALCULATION ENGINE ---
   const stats = useMemo(() => {
-    // 1. Calculate Linear Meters of Seating (U-Shape)
-    // Back wall width + (Left depth - corner) + (Right depth - corner)
+    // Linear Meters calculation
     const cornerWidth = 0.9;
     const linearMeters = config.width + (config.depth - cornerWidth) + (config.depth - cornerWidth);
 
-    // 2. Fabric Estimation (CM)
-    // Approx: 3.5m of fabric needed per linear meter of majlis (covering base, back, armrests)
+    // Fabric Estimation (CM & Meters)
     const fabricMeters = linearMeters * 3.5;
     const fabricCM = fabricMeters * 100;
 
-    // 3. Thread Estimation
-    // Depends on Pattern Complexity
+    // Thread Estimation based on Pattern Complexity
     const patternComplexity = {
-      "None": 50,
-      "Modern": 200,
-      "Sadu": 450,
-      "Najdi": 400,
-      "Royal": 500,
-      "Greek": 350,
-      "Floral": 480,
-      "Kufic": 420
+      "None": 50, "Modern": 200, "Sadu": 450, 
+      "Najdi": 400, "Royal": 500, "Greek": 350, 
+      "Floral": 480, "Kufic": 420
     };
-    // Average complexity of selected patterns
     const avgComplexity = (patternComplexity[config.mattressPattern] + patternComplexity[config.backrestPattern]) / 2;
     const threadMeters = linearMeters * avgComplexity;
 
-    // 4. Foam Volume (Cubic Meters)
-    // Approx 0.4m height * 0.85 depth * length
+    // Foam Volume
     const foamVolume = linearMeters * 0.4 * 0.85;
 
-    // 5. Financials
+    // Financials
     const costFabric = fabricMeters * costs.fabricPrice;
     const costThread = threadMeters * costs.threadPrice;
     const costFoam = foamVolume * costs.foamPrice;
     const costWood = linearMeters * costs.woodPrice;
     const totalCost = costFabric + costThread + costFoam + costWood + costs.laborCost;
 
-    return {
-      linearMeters,
-      fabricCM,
-      fabricMeters,
-      threadMeters,
-      foamVolume,
-      costFabric,
-      costThread,
-      costFoam,
-      costWood,
-      totalCost
-    };
+    return { linearMeters, fabricCM, fabricMeters, threadMeters, foamVolume, totalCost };
   }, [config, costs]);
 
   const handleChange = (key, value) => setConfig(prev => ({ ...prev, [key]: value }));
@@ -146,6 +125,18 @@ export const App = () => {
             <input type="color" value={config.woodColor} onChange={(e) => handleChange('woodColor', e.target.value)} />
           </div>
         </div>
+        <div className="control-group">
+          <label>Back Wall</label>
+          <div className="color-wrapper">
+            <input type="color" value={config.wallColor} onChange={(e) => handleChange('wallColor', e.target.value)} />
+          </div>
+        </div>
+        <div className="control-group">
+          <label>Clock/Metal</label>
+          <div className="color-wrapper">
+            <input type="color" value={config.clockColor} onChange={(e) => handleChange('clockColor', e.target.value)} />
+          </div>
+        </div>
       </div>
 
       {/* --- RIGHT PANEL: ACCOUNTING & FACTORY --- */}
@@ -154,7 +145,7 @@ export const App = () => {
         
         <div className="section-title">Production Metrics</div>
         <div className="data-row">
-          <span className="data-label">Council Dimensions:</span>
+          <span className="data-label">Dimensions:</span>
           <span className="data-value">{config.width}m x {config.depth}m</span>
         </div>
         <div className="data-row">
@@ -184,30 +175,18 @@ export const App = () => {
           <input type="number" value={costs.fabricPrice} onChange={(e) => handleCostChange('fabricPrice', e.target.value)} />
         </div>
         <div className="control-group">
-          <label>Thread Price ($/m)</label>
-          <input type="number" value={costs.threadPrice} onChange={(e) => handleCostChange('threadPrice', e.target.value)} />
-        </div>
-        <div className="control-group">
           <label>Labor (Flat Rate)</label>
           <input type="number" value={costs.laborCost} onChange={(e) => handleCostChange('laborCost', e.target.value)} />
         </div>
 
         <div className="total-box">
-          <div className="total-row">
-            <span>Material Cost:</span>
-            <span>${(stats.totalCost - costs.laborCost).toFixed(2)}</span>
-          </div>
-          <div className="total-row">
-            <span>Labor:</span>
-            <span>${costs.laborCost.toFixed(2)}</span>
-          </div>
           <div className="total-row grand-total">
             <span>TOTAL ESTIMATE:</span>
             <span>${stats.totalCost.toFixed(2)}</span>
           </div>
         </div>
 
-        <button className="print-btn" onClick={() => window.print()}>Print Quotation</button>
+        <button className="print-btn" onClick={() => window.print()}>Print BOM</button>
       </div>
 
       {/* --- 3D SCENE --- */}
@@ -219,7 +198,22 @@ export const App = () => {
         <spotLight position={[-5, 8, -5]} angle={0.4} penumbra={0.5} intensity={0.5} color="#ffdcb4" />
         <pointLight position={[0, 3, 0]} intensity={0.3} color="white" />
         
-        <Environment preset="lobby" />
+        {/* PROCEDURAL ENVIRONMENT (Fixes 'Failed to fetch' error) */}
+        <Environment resolution={512}>
+          {/* Ceiling Lights for reflections */}
+          <Lightformer intensity={2} rotation-x={Math.PI / 2} position={[0, 4, -9]} scale={[10, 1, 1]} />
+          <Lightformer intensity={2} rotation-x={Math.PI / 2} position={[0, 4, -6]} scale={[10, 1, 1]} />
+          <Lightformer intensity={2} rotation-x={Math.PI / 2} position={[0, 4, -3]} scale={[10, 1, 1]} />
+          <Lightformer intensity={2} rotation-x={Math.PI / 2} position={[0, 4, 0]} scale={[10, 1, 1]} />
+          <Lightformer intensity={2} rotation-x={Math.PI / 2} position={[0, 4, 3]} scale={[10, 1, 1]} />
+          <Lightformer intensity={2} rotation-x={Math.PI / 2} position={[0, 4, 6]} scale={[10, 1, 1]} />
+          <Lightformer intensity={2} rotation-x={Math.PI / 2} position={[0, 4, 9]} scale={[10, 1, 1]} />
+          
+          {/* Soft side lighting */}
+          <Lightformer intensity={2} rotation-y={Math.PI / 2} position={[-50, 2, 0]} scale={[100, 2, 1]} />
+          <Lightformer intensity={2} rotation-y={-Math.PI / 2} position={[50, 2, 0]} scale={[100, 2, 1]} />
+        </Environment>
+
         <SoftShadows size={15} samples={16} />
 
         <Bvh firstHitOnly>
